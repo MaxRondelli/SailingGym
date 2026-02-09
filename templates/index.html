@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Regatta Simulator</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+        h1 {
+            text-align: center;
+            font-size: 1.8rem;
+            margin-bottom: 2rem;
+            color: #38bdf8;
+        }
+        h1 span { color: #f8fafc; }
+
+        /* ── Cards ── */
+        .card {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid #334155;
+        }
+        .card h2 {
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+        }
+
+        /* ── Form ── */
+        .params-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 1rem;
+        }
+        label {
+            display: block;
+            font-size: .85rem;
+            color: #94a3b8;
+            margin-bottom: .35rem;
+        }
+        input[type="range"] {
+            width: 100%;
+            accent-color: #38bdf8;
+        }
+        .range-value {
+            text-align: center;
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #f8fafc;
+            margin-top: .25rem;
+        }
+
+        /* Toggle */
+        .toggle-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .toggle {
+            position: relative;
+            width: 56px;
+            height: 28px;
+            margin-top: .5rem;
+        }
+        .toggle input { opacity: 0; width: 0; height: 0; }
+        .toggle .slider {
+            position: absolute;
+            inset: 0;
+            background: #475569;
+            border-radius: 28px;
+            cursor: pointer;
+            transition: .3s;
+        }
+        .toggle .slider::before {
+            content: '';
+            position: absolute;
+            width: 22px; height: 22px;
+            left: 3px; top: 3px;
+            background: #f8fafc;
+            border-radius: 50%;
+            transition: .3s;
+        }
+        .toggle input:checked + .slider { background: #38bdf8; }
+        .toggle input:checked + .slider::before { transform: translateX(28px); }
+        .toggle-label {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #f8fafc;
+            margin-top: .35rem;
+        }
+
+        /* Timesteps */
+        .timesteps-row {
+            margin-top: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .timesteps-row label { margin: 0; white-space: nowrap; }
+        .timesteps-row input[type="range"] { flex: 1; }
+        .timesteps-row .range-value { min-width: 90px; font-size: 1rem; }
+
+        /* ── Buttons ── */
+        .btn-row {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.2rem;
+        }
+        button {
+            flex: 1;
+            padding: .75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: .2s;
+        }
+        button:disabled {
+            opacity: .4;
+            cursor: not-allowed;
+        }
+        .btn-train {
+            background: #2563eb;
+            color: #fff;
+        }
+        .btn-train:hover:not(:disabled) { background: #1d4ed8; }
+        .btn-sim {
+            background: #059669;
+            color: #fff;
+        }
+        .btn-sim:hover:not(:disabled) { background: #047857; }
+
+        /* ── Progress ── */
+        .progress-wrap {
+            display: none;
+            margin-top: 1rem;
+        }
+        .progress-wrap.active { display: block; }
+        .progress-bar-bg {
+            background: #334155;
+            border-radius: 8px;
+            height: 24px;
+            overflow: hidden;
+        }
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #2563eb, #38bdf8);
+            border-radius: 8px;
+            transition: width .4s;
+            min-width: 0;
+        }
+        .progress-text {
+            text-align: center;
+            font-size: .85rem;
+            margin-top: .4rem;
+            color: #94a3b8;
+        }
+        .btn-cancel {
+            background: #dc2626;
+            color: #fff;
+            margin-top: .6rem;
+        }
+        .btn-cancel:hover:not(:disabled) { background: #b91c1c; }
+
+        /* ── Status ── */
+        #status-msg {
+            text-align: center;
+            padding: .6rem;
+            font-size: .95rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            display: none;
+        }
+        #status-msg.info  { display: block; background: #1e3a5f; color: #7dd3fc; }
+        #status-msg.ok    { display: block; background: #14532d; color: #86efac; }
+        #status-msg.err   { display: block; background: #450a0a; color: #fca5a5; }
+
+        /* ── Results ── */
+        .results { display: none; }
+        .results.active { display: block; }
+
+        .video-wrap {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+        .video-wrap video {
+            max-width: 100%;
+            border-radius: 8px;
+            border: 2px solid #334155;
+        }
+
+        /* Stats table */
+        .stats-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .stats-table th, .stats-table td {
+            padding: .6rem .8rem;
+            text-align: left;
+            border-bottom: 1px solid #334155;
+        }
+        .stats-table th {
+            color: #94a3b8;
+            font-size: .8rem;
+            text-transform: uppercase;
+        }
+        .stats-table td { font-size: .95rem; }
+        .winner-badge {
+            display: inline-block;
+            background: #fbbf24;
+            color: #1e293b;
+            font-size: .75rem;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-left: .4rem;
+        }
+        .outcome-banner {
+            text-align: center;
+            font-size: 1.1rem;
+            font-weight: 700;
+            padding: .8rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            background: #1e3a5f;
+            color: #7dd3fc;
+        }
+
+        /* Spinner */
+        .spinner {
+            display: inline-block;
+            width: 18px; height: 18px;
+            border: 3px solid #94a3b8;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin .6s linear infinite;
+            vertical-align: middle;
+            margin-right: .4rem;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── Simulation wave loader ── */
+        .sim-loader {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 1rem 1.5rem;
+        }
+        .sim-loader.active { display: flex; }
+
+        .sim-loader-scene {
+            position: relative;
+            width: 320px;
+            height: 110px;
+            overflow: hidden;
+        }
+        .sim-boat {
+            position: absolute;
+            left: 50%;
+            bottom: 18px;
+            z-index: 3;
+            animation: sim-rock 2.4s ease-in-out infinite, sim-bob 2s ease-in-out infinite;
+        }
+        .sim-boat svg { width: 52px; height: 52px; filter: drop-shadow(0 2px 5px rgba(0,0,0,.5)); }
+
+        @keyframes sim-rock {
+            0%, 100% { transform: translateX(-50%) rotate(-6deg); }
+            50%      { transform: translateX(-50%) rotate(6deg); }
+        }
+        @keyframes sim-bob {
+            0%, 100% { bottom: 18px; }
+            50%      { bottom: 26px; }
+        }
+
+        .sim-wave {
+            position: absolute;
+            bottom: 0;
+            left: -100%;
+            width: 300%;
+            height: 40px;
+        }
+        .sim-wave path { fill: currentColor; }
+        .sw-1 { color: rgba(56,189,248,.35); animation: sw-drift 3s   linear infinite;         z-index: 1; bottom: 0; }
+        .sw-2 { color: rgba(56,189,248,.22); animation: sw-drift 4.5s linear infinite reverse; z-index: 2; bottom: 5px; }
+        .sw-3 { color: rgba(56,189,248,.12); animation: sw-drift 6s   linear infinite;         z-index: 0; bottom: -3px; }
+
+        @keyframes sw-drift {
+            0%   { transform: translateX(0); }
+            100% { transform: translateX(33.33%); }
+        }
+
+        .sim-loader-text {
+            margin-top: .8rem;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #94a3b8;
+        }
+        .sim-loader-text .dots::after {
+            content: '';
+            animation: dotanim 1.4s steps(4, end) infinite;
+        }
+        @keyframes dotanim {
+            0%  { content: ''; }
+            25% { content: '.'; }
+            50% { content: '..'; }
+            75% { content: '...'; }
+        }
+
+        /* ── Test section ── */
+        .test-row {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .test-row label { margin: 0; white-space: nowrap; }
+        .test-row input[type="number"] {
+            width: 100px;
+            padding: .45rem .6rem;
+            border-radius: 6px;
+            border: 1px solid #475569;
+            background: #0f172a;
+            color: #f8fafc;
+            font-size: 1rem;
+            text-align: center;
+        }
+        .btn-test {
+            background: #7c3aed;
+            color: #fff;
+            flex: none;
+            padding: .6rem 1.2rem;
+        }
+        .btn-test:hover:not(:disabled) { background: #6d28d9; }
+
+        .test-progress {
+            display: none;
+            margin-top: .8rem;
+        }
+        .test-progress.active { display: block; }
+
+        .test-results { display: none; margin-top: 1rem; }
+        .test-results.active { display: block; }
+
+        .test-outcome-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: .6rem;
+            margin-bottom: 1rem;
+        }
+        .test-stat-card {
+            background: #0f172a;
+            border-radius: 8px;
+            padding: .7rem;
+            text-align: center;
+            border: 1px solid #334155;
+        }
+        .test-stat-card .val {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #f8fafc;
+        }
+        .test-stat-card .lbl {
+            font-size: .75rem;
+            color: #94a3b8;
+            margin-top: .2rem;
+        }
+        .test-stat-card.highlight { border-color: #38bdf8; }
+        .test-stat-card.highlight .val { color: #38bdf8; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1><svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" style="width:1.6em;height:1.6em;vertical-align:middle;margin-right:.3em"><path d="M8 44 L16 56 L48 56 L56 44 Z" fill="#b45309" stroke="#78350f" stroke-width="1.5"/><line x1="14" y1="48" x2="50" y2="48" stroke="#78350f" stroke-width="1"/><line x1="32" y1="44" x2="32" y2="12" stroke="#f8fafc" stroke-width="2"/><path d="M32 14 L32 42 L48 42 Z" fill="#f8fafc" opacity=".9"/><polygon points="32,12 32,18 24,15" fill="#ef4444"/></svg><span>Regatta</span> Simulator</h1>
+
+        <!-- ── Parameters ── -->
+        <div class="card">
+            <h2>Parameters</h2>
+            <div class="params-grid">
+                <div>
+                    <label for="max_steps">Max Steps to Target</label>
+                    <input type="range" id="max_steps" min="50" max="250" value="250" step="10"
+                           oninput="document.getElementById('val_steps').textContent=this.value">
+                    <div class="range-value" id="val_steps">250</div>
+                </div>
+                <div>
+                    <label for="field_size">Field Size</label>
+                    <input type="range" id="field_size" min="100" max="400" value="400" step="50"
+                           oninput="document.getElementById('val_field').textContent=this.value">
+                    <div class="range-value" id="val_field">400</div>
+                </div>
+                <div class="toggle-wrap">
+                    <label>Variable Wind</label>
+                    <label class="toggle">
+                        <input type="checkbox" id="variable_wind" checked>
+                        <span class="slider"></span>
+                    </label>
+                    <span class="toggle-label" id="wind_label">ON</span>
+                </div>
+            </div>
+            <div class="timesteps-row">
+                <label for="total_timesteps">Training Timesteps</label>
+                <input type="range" id="total_timesteps" min="100000" max="2000000" value="500000" step="100000"
+                       oninput="document.getElementById('val_ts').textContent=Number(this.value).toLocaleString()">
+                <div class="range-value" id="val_ts">500,000</div>
+            </div>
+            <div class="btn-row">
+                <button class="btn-train" id="btn-train" onclick="startTraining()">Train Model</button>
+                <button class="btn-sim"   id="btn-sim"   onclick="runSimulation()" disabled>Run Simulation</button>
+            </div>
+            <div class="progress-wrap" id="progress-wrap">
+                <div class="progress-bar-bg"><div class="progress-bar" id="progress-bar" style="width:0%"></div></div>
+                <div class="progress-text" id="progress-text">Initializing...</div>
+                <button class="btn-cancel" id="btn-cancel" onclick="cancelTraining()">Cancel Training</button>
+            </div>
+            <div id="status-msg"></div>
+
+            <!-- Simulation wave loader -->
+            <div class="sim-loader" id="sim-loader">
+                <div class="sim-loader-scene">
+                    <div class="sim-boat">
+                        <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M8 44 L16 56 L48 56 L56 44 Z" fill="#b45309" stroke="#78350f" stroke-width="1.5"/>
+                            <line x1="14" y1="48" x2="50" y2="48" stroke="#78350f" stroke-width="1"/>
+                            <line x1="32" y1="44" x2="32" y2="12" stroke="#f8fafc" stroke-width="2"/>
+                            <path d="M32 14 L32 42 L48 42 Z" fill="#f8fafc" opacity=".9"/>
+                            <polygon points="32,12 32,18 24,15" fill="#ef4444"/>
+                        </svg>
+                    </div>
+                    <svg class="sim-wave sw-1" viewBox="0 0 1200 40" preserveAspectRatio="none"><path d="M0,20 C150,4 350,34 600,20 C850,4 1050,34 1200,20 L1200,40 L0,40 Z"/></svg>
+                    <svg class="sim-wave sw-2" viewBox="0 0 1200 40" preserveAspectRatio="none"><path d="M0,22 C200,6 400,32 600,22 C800,8 1000,32 1200,22 L1200,40 L0,40 Z"/></svg>
+                    <svg class="sim-wave sw-3" viewBox="0 0 1200 40" preserveAspectRatio="none"><path d="M0,24 C180,5 380,34 600,24 C820,8 1020,34 1200,24 L1200,40 L0,40 Z"/></svg>
+                </div>
+                <div class="sim-loader-text">Simulating<span class="dots"></span></div>
+            </div>
+        </div>
+
+        <!-- ── Results ── -->
+        <div class="card results" id="results">
+            <h2>Simulation Results</h2>
+            <div class="outcome-banner" id="outcome-banner"></div>
+            <div class="video-wrap">
+                <video id="sim-video" controls autoplay loop muted></video>
+            </div>
+            <table class="stats-table">
+                <thead>
+                    <tr>
+                        <th>Agent</th>
+                        <th>Avg VMG</th>
+                        <th>Polar Eff.</th>
+                        <th>Path Eff.</th>
+                        <th>Max Speed</th>
+                    </tr>
+                </thead>
+                <tbody id="stats-body"></tbody>
+            </table>
+        </div>
+
+        <!-- ── Test ── -->
+        <div class="card">
+            <h2>Validation Test</h2>
+            <div class="test-row">
+                <label for="num_episodes">Episodes</label>
+                <input type="number" id="num_episodes" value="100" min="1" max="10000">
+                <button class="btn-test" id="btn-test" onclick="runTest()" disabled>Run Test</button>
+            </div>
+            <div class="test-progress" id="test-progress">
+                <div class="progress-bar-bg"><div class="progress-bar" id="test-bar" style="width:0%"></div></div>
+                <div class="progress-text" id="test-progress-text">Starting...</div>
+            </div>
+            <div class="test-results" id="test-results"></div>
+        </div>
+    </div>
+
+<script>
+    // Toggle label
+    const windCb = document.getElementById('variable_wind');
+    windCb.addEventListener('change', () => {
+        document.getElementById('wind_label').textContent = windCb.checked ? 'ON' : 'OFF';
+    });
+
+    function setStatus(msg, type) {
+        const el = document.getElementById('status-msg');
+        el.textContent = msg;
+        el.className = type; // 'info', 'ok', 'err'
+    }
+
+    // ── Train ──
+    let pollTimer = null;
+
+    async function startTraining() {
+        const btn = document.getElementById('btn-train');
+        const simBtn = document.getElementById('btn-sim');
+        btn.disabled = true;
+        simBtn.disabled = true;
+        document.getElementById('results').classList.remove('active');
+
+        const body = {
+            max_steps: +document.getElementById('max_steps').value,
+            field_size: +document.getElementById('field_size').value,
+            variable_wind: document.getElementById('variable_wind').checked,
+            total_timesteps: +document.getElementById('total_timesteps').value,
+        };
+
+        setStatus('', '');
+        const wrap = document.getElementById('progress-wrap');
+        wrap.classList.add('active');
+        document.getElementById('progress-bar').style.width = '0%';
+        document.getElementById('progress-text').textContent = 'Starting...';
+
+        try {
+            const res = await fetch('/train', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            if (!res.ok) {
+                const d = await res.json();
+                throw new Error(d.error || 'Failed to start training');
+            }
+            pollTimer = setInterval(pollTraining, 1000);
+        } catch (e) {
+            setStatus(e.message, 'err');
+            btn.disabled = false;
+            wrap.classList.remove('active');
+        }
+    }
+
+    async function pollTraining() {
+        try {
+            const res = await fetch('/train/status');
+            const d = await res.json();
+
+            // Update progress bar
+            document.getElementById('progress-bar').style.width = d.progress + '%';
+            document.getElementById('progress-text').textContent = d.message;
+
+            if (d.done) {
+                clearInterval(pollTimer);
+                document.getElementById('progress-wrap').classList.remove('active');
+                setStatus('Training complete! You can now run a simulation.', 'ok');
+                document.getElementById('btn-train').disabled = false;
+                document.getElementById('btn-sim').disabled = false;
+                document.getElementById('btn-test').disabled = false;
+            } else if (d.error) {
+                clearInterval(pollTimer);
+                document.getElementById('progress-wrap').classList.remove('active');
+                const msg = d.error === 'cancelled' ? 'Training cancelled.' : 'Training error: ' + d.error;
+                const cls = d.error === 'cancelled' ? 'info' : 'err';
+                setStatus(msg, cls);
+                document.getElementById('btn-train').disabled = false;
+                document.getElementById('btn-sim').disabled = false;
+                document.getElementById('btn-test').disabled = false;
+            }
+        } catch (e) {
+            // ignore transient network errors
+        }
+    }
+
+    // ── Cancel Training ──
+    async function cancelTraining() {
+        try {
+            await fetch('/train/cancel', { method: 'POST' });
+            document.getElementById('btn-cancel').disabled = true;
+        } catch (e) { /* ignore */ }
+    }
+
+    // ── Simulate ──
+    async function runSimulation() {
+        const btn = document.getElementById('btn-sim');
+        btn.disabled = true;
+        document.getElementById('btn-train').disabled = true;
+        setStatus('', '');
+        document.getElementById('results').classList.remove('active');
+        document.getElementById('sim-loader').classList.add('active');
+
+        try {
+            const res = await fetch('/simulate', { method: 'POST' });
+            const d = await res.json();
+            if (d.error) throw new Error(d.error);
+
+            // Show video
+            const video = document.getElementById('sim-video');
+            video.src = d.video_url;
+
+            // Outcome
+            document.getElementById('outcome-banner').textContent =
+                `${d.stats.outcome}  —  ${d.stats.steps} steps`;
+
+            // Stats table
+            const tbody = document.getElementById('stats-body');
+            tbody.innerHTML = '';
+            for (const [agent, s] of Object.entries(d.stats.agents)) {
+                const badge = s.is_winner ? '<span class="winner-badge">WINNER</span>' : '';
+                tbody.innerHTML += `<tr>
+                    <td>${agent}${badge}</td>
+                    <td>${s.avg_vmg}</td>
+                    <td>${s.polar_efficiency}%</td>
+                    <td>${s.path_efficiency}%</td>
+                    <td>${s.max_speed} kn</td>
+                </tr>`;
+            }
+
+            document.getElementById('results').classList.add('active');
+        } catch (e) {
+            setStatus(e.message, 'err');
+        } finally {
+            document.getElementById('sim-loader').classList.remove('active');
+            btn.disabled = false;
+            document.getElementById('btn-train').disabled = false;
+        }
+    }
+
+    // ── Test ──
+    let testPollTimer = null;
+
+    async function runTest() {
+        const btn = document.getElementById('btn-test');
+        btn.disabled = true;
+        document.getElementById('test-results').classList.remove('active');
+        document.getElementById('test-progress').classList.add('active');
+        document.getElementById('test-bar').style.width = '0%';
+        document.getElementById('test-progress-text').textContent = 'Starting...';
+        setStatus('', '');
+
+        const numEpisodes = +document.getElementById('num_episodes').value || 100;
+
+        try {
+            const res = await fetch('/test', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ num_episodes: numEpisodes })
+            });
+            if (!res.ok) {
+                const d = await res.json();
+                throw new Error(d.error || 'Failed to start test');
+            }
+            testPollTimer = setInterval(pollTest, 1000);
+        } catch (e) {
+            setStatus(e.message, 'err');
+            btn.disabled = false;
+            document.getElementById('test-progress').classList.remove('active');
+        }
+    }
+
+    async function pollTest() {
+        try {
+            const res = await fetch('/test/status');
+            const d = await res.json();
+
+            document.getElementById('test-bar').style.width = d.progress + '%';
+            document.getElementById('test-progress-text').textContent = d.message;
+
+            if (d.done) {
+                clearInterval(testPollTimer);
+                document.getElementById('test-progress').classList.remove('active');
+                document.getElementById('btn-test').disabled = false;
+                showTestResults(d.results);
+            } else if (d.error) {
+                clearInterval(testPollTimer);
+                document.getElementById('test-progress').classList.remove('active');
+                setStatus('Test error: ' + d.error, 'err');
+                document.getElementById('btn-test').disabled = false;
+            }
+        } catch (e) { /* ignore */ }
+    }
+
+    function showTestResults(r) {
+        const c = r.counts;
+        const div = document.getElementById('test-results');
+
+        let html = `<div class="test-outcome-grid">`;
+        html += statCard(r.success_rate + '%', 'Success Rate', true);
+        html += statCard(r.num_episodes, 'Episodes');
+        html += statCard(c.wins_boat_0, 'Wins boat_0');
+        html += statCard(c.wins_boat_1, 'Wins boat_1');
+        html += statCard(c.collisions, 'Collisions');
+        html += statCard(c.out_of_bounds, 'Out of Bounds');
+        html += statCard(c.timeouts, 'Timeouts');
+        html += `</div>`;
+
+        // Agent detail table
+        html += `<table class="stats-table"><thead><tr>
+            <th>Agent</th><th>Avg VMG</th><th>Polar Eff.</th><th>Path Eff.</th>
+            <th>Start IN</th><th>Win (IN)</th><th>Start OUT</th><th>Win (OUT)</th>
+        </tr></thead><tbody>`;
+        for (const [a, s] of Object.entries(r.agents)) {
+            const pIn  = s.start_inside  > 0 ? Math.round(s.win_inside  / s.start_inside  * 100) : 0;
+            const pOut = s.start_outside > 0 ? Math.round(s.win_outside / s.start_outside * 100) : 0;
+            html += `<tr>
+                <td>${a}</td>
+                <td>${s.avg_vmg}</td>
+                <td>${s.polar_efficiency}%</td>
+                <td>${s.path_efficiency}%</td>
+                <td>${s.start_inside}</td>
+                <td>${s.win_inside} (${pIn}%)</td>
+                <td>${s.start_outside}</td>
+                <td>${s.win_outside} (${pOut}%)</td>
+            </tr>`;
+        }
+        html += `</tbody></table>`;
+
+        div.innerHTML = html;
+        div.classList.add('active');
+    }
+
+    function statCard(val, lbl, highlight) {
+        const cls = highlight ? 'test-stat-card highlight' : 'test-stat-card';
+        return `<div class="${cls}"><div class="val">${val}</div><div class="lbl">${lbl}</div></div>`;
+    }
+</script>
+</body>
+</html>
