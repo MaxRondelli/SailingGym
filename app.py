@@ -165,10 +165,9 @@ def simulate():
         ai = last_infos.get(a, {})
         stats["agents"][a] = {
             "avg_vmg":          round(ai.get("avg_vmg", 0), 2),
-            "polar_efficiency": round(ai.get("polar_efficiency", 0) * 100, 1),
-            "path_efficiency":  round(ai.get("path_efficiency", 0) * 100, 1),
             "max_speed":        round(ai.get("max_speed", 0), 1),
             "is_winner":        ai.get("is_winner", False),
+            "triple_turns":     ai.get("triple_turns", 0),
         }
 
     return jsonify({"video_url": f"/static/{video_name}", "stats": stats})
@@ -257,8 +256,8 @@ def _test_worker(model_path, num_episodes, params):
         }
 
         metrics = {
-            "boat_0": {"vmg": [], "polar": [], "path": []},
-            "boat_1": {"vmg": [], "polar": [], "path": []},
+            "boat_0": {"vmg": [], "triple": []},
+            "boat_1": {"vmg": [], "triple": []},
         }
 
         for i in range(num_episodes):
@@ -316,8 +315,7 @@ def _test_worker(model_path, num_episodes, params):
             for a in env.possible_agents:
                 ai = last_infos.get(a, {})
                 metrics[a]["vmg"].append(ai.get("avg_vmg", 0))
-                metrics[a]["polar"].append(ai.get("polar_efficiency", 0))
-                metrics[a]["path"].append(ai.get("path_efficiency", 0))
+                metrics[a]["triple"].append(ai.get("triple_turns", 0))
 
             pct = int((i + 1) / num_episodes * 100)
             test_state["progress"] = pct
@@ -335,8 +333,7 @@ def _test_worker(model_path, num_episodes, params):
             ps = position_stats[a]
             agents_stats[a] = {
                 "avg_vmg":          round(float(np.mean(metrics[a]["vmg"])), 2),
-                "polar_efficiency": round(float(np.mean(metrics[a]["polar"])) * 100, 1),
-                "path_efficiency":  round(float(np.mean(metrics[a]["path"])) * 100, 1),
+                "avg_triple_turns": round(float(np.mean(metrics[a]["triple"])), 2),
                 "start_inside":     ps["inside"],
                 "start_outside":    ps["outside"],
                 "win_inside":       ps["win_inside"],

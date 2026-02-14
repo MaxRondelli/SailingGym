@@ -360,7 +360,7 @@
 
         .test-outcome-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            grid-template-columns: repeat(3, 1fr);
             gap: .6rem;
             margin-bottom: 1rem;
         }
@@ -381,8 +381,17 @@
             color: #94a3b8;
             margin-top: .2rem;
         }
-        .test-stat-card.highlight { border-color: #38bdf8; }
-        .test-stat-card.highlight .val { color: #38bdf8; }
+        .test-stat-card.highlight {
+            grid-column: 1 / -1;
+            border-color: #38bdf8;
+        }
+        .test-stat-card.highlight .val {
+            font-size: 2.4rem;
+            color: #38bdf8;
+        }
+        .test-stat-card.highlight .lbl {
+            font-size: .95rem;
+        }
     </style>
 </head>
 <body>
@@ -455,8 +464,7 @@
                     <tr>
                         <th>Agent</th>
                         <th>Avg VMG</th>
-                        <th>Polar Eff.</th>
-                        <th>Path Eff.</th>
+                        <th>Triple Turns</th>
                         <th>Max Speed</th>
                     </tr>
                 </thead>
@@ -596,8 +604,7 @@
                 tbody.innerHTML += `<tr>
                     <td>${agent}${badge}</td>
                     <td>${s.avg_vmg}</td>
-                    <td>${s.polar_efficiency}%</td>
-                    <td>${s.path_efficiency}%</td>
+                    <td>${s.triple_turns}</td>
                     <td>${s.max_speed} kn</td>
                 </tr>`;
             }
@@ -678,11 +685,11 @@
         html += statCard(c.collisions, 'Collisions');
         html += statCard(c.out_of_bounds, 'Out of Bounds');
         html += statCard(c.timeouts, 'Timeouts');
-        html += `</div>`;
+        html += `</div>`;  
 
         // Agent detail table
         html += `<table class="stats-table"><thead><tr>
-            <th>Agent</th><th>Avg VMG</th><th>Polar Eff.</th><th>Path Eff.</th>
+            <th>Agent</th><th>Avg VMG</th><th>Avg Triple Turns</th>
             <th>Start IN</th><th>Win (IN)</th><th>Start OUT</th><th>Win (OUT)</th>
         </tr></thead><tbody>`;
         for (const [a, s] of Object.entries(r.agents)) {
@@ -691,8 +698,7 @@
             html += `<tr>
                 <td>${a}</td>
                 <td>${s.avg_vmg}</td>
-                <td>${s.polar_efficiency}%</td>
-                <td>${s.path_efficiency}%</td>
+                <td>${s.avg_triple_turns}</td>
                 <td>${s.start_inside}</td>
                 <td>${s.win_inside} (${pIn}%)</td>
                 <td>${s.start_outside}</td>
