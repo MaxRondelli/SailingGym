@@ -1,5 +1,4 @@
 import numpy as np
-import gymnasium as gym
 from gymnasium import spaces
 import matplotlib
 matplotlib.use('Agg')
@@ -79,7 +78,7 @@ class MultiAgentSailingZoo(ParallelEnv):
         ])
 
         # Wind
-        self.wind_direction = self.np_random.uniform(0, np.pi)
+        self.wind_direction = np.pi/2
         self.wind_speed = self.np_random.uniform(10, 18)
         self.wind_change_steps = 25
 
